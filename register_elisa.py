@@ -10,6 +10,7 @@ import cairo
 import argparse
 import pandas as pd
 from PIL import Image
+from shapely.geometry import Polygon, Point
 
 def tx_matrix(from_points, to_points):
     # from_points and to_points are nx3 matrices
@@ -79,6 +80,22 @@ def measure_cells(data, cells, radius):
         stats[i,:] = mean, sd, maxv, minv, integ, lq, median, uq
     return stats
 
+def filter_excluded(cells, roiset_fn):
+    rois = readroi.read_roi_zip(roiset_fn)
+    shapes = []
+    for roi in rois:
+        shapes.append(Polygon(list([list(i) for i in roi[1]])))
+    keep = []
+    for i, (x, y, z) in enumerate(cells):
+        good = True
+        p = Point((x,y))
+        for shape in shapes:
+            if shape.contains(p):
+                good = False
+                break
+        if good:
+            keep.append(i)
+    return keep
 
 def main():
     parser = argparse.ArgumentParser(description='Process single-cell ELISA images.',
@@ -93,6 +110,8 @@ def main():
                         help='ELISA well radius, in pixels.')
     parser.add_argument('--tx-plot', '-t', default='transform.png',
                         help='Filename for transformation plot.')
+    parser.add_argument('--exclude', '-e', metavar='exclude-RoiSet.zip',
+                        help='ROI set of regions to exclude from measurement')
     parser.add_argument('--output', '-o', default='elisa_results.txt',
                         help='Filename to save information about the live/dead image.')
     args = parser.parse_args()
@@ -104,9 +123,15 @@ def main():
     print "Loaded {} cells.".format(tx_cells.shape[0])
 
     data = tf.TiffFile(args.elisa)[0].asarray()
-    row_idx = np.nonzero(in_bounds(tx_cells, args.well_radius, data.shape))
+    row_idx = np.nonzero(in_bounds(tx_cells, args.well_radius, data.shape))[0]
     tx_cells = tx_cells[row_idx]
     print "Kept {} in-bounds cells.".format(tx_cells.shape[0])
+
+    if args.exclude:
+        not_excluded = filter_excluded(tx_cells, args.exclude)
+        row_idx = row_idx[not_excluded]
+        tx_cells = tx_cells[not_excluded]
+    print "Kept {} cells not excluded.".format(tx_cells.shape[0])
 
     surface = surface_from_array(data)
     surface = annotate_cells(surface, tx_cells, args.well_radius, (1.0, 0.0, 0.0))
@@ -116,7 +141,7 @@ def main():
     pil_image.save("annotated.jpg")
 
     stats = measure_cells(data, tx_cells, args.well_radius)
-    out = np.hstack([row_idx[0].reshape((-1,1)), tx_cells[:,:2], stats])
+    out = np.hstack([row_idx.reshape((-1,1)), tx_cells[:,:2], stats])
     header = ['cells_row', 'x', 'y', 'mean', 'sd', 'max', 'min', 'integrated', 'q25', 'q50', 'q75']
     np.savetxt(args.output, out, delimiter=',', fmt=['%d'] * 3 + ['%f'] * 8, header=','.join(header), comments='')
 
