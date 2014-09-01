@@ -40,8 +40,8 @@ def id_singlets(image_handle, threshold, min_size, max_size, min_distance):
     green_scores = img.sum(green.asarray(), labels, indices)
     red_scores = img.sum(red.asarray(), labels, indices)
     areas = img.sum(spots, labels, indices)
-    scores = pd.DataFrame({'x': centers[:,0],
-                           'y': centers[:,1],
+    scores = pd.DataFrame({'x': centers[:,1],
+                           'y': centers[:,0],
                            'area': areas,
                            'green_intensity': green_scores,
                            'red_intensity': red_scores})
