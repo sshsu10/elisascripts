@@ -6,10 +6,10 @@ import scipy.spatial as spatial
 import argparse
 import pandas as pd
 
-def id_singlets(image_handle, threshold, min_size, max_size, min_distance):
+def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distance):
     orig = tf.TiffFile(image_handle)
     red, green = orig
-    spots = green.asarray() > threshold
+    spots = (orig[channel]).asarray() > threshold
     labels, n_spots = img.label(spots)
     print "Found {} spots.".format(n_spots)
 
@@ -54,6 +54,8 @@ def main():
                         help='Stitched live/dead image, in TIFF format.')
     parser.add_argument('--threshold', '-t', required=True, type=int,
                         help='Threshold on [0, 4096) for live/dead image.')
+    parser.add_argument('--channel', '-c', type=int, default=1,
+                        help='Which image channel to analyze (0-based index)')
     parser.add_argument('--cell-size', '-s', nargs=2, default=(10, 32), type=int,
                         metavar=('min', 'max'),
                         help='Recognize cells with areas on [min, max), in live/dead pixel units.')
@@ -65,7 +67,8 @@ def main():
 
     print 'Identifying singlets...'
     singlets = id_singlets(args.livedead, threshold=args.threshold, min_distance=args.distance,
-                           min_size=args.cell_size[0], max_size=args.cell_size[1])
+                           min_size=args.cell_size[0], max_size=args.cell_size[1],
+                           channel=args.channel)
     singlets.to_csv(args.output, index=False)
     print 'Found {} singlets.'.format(len(singlets))
 
