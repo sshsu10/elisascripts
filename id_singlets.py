@@ -5,6 +5,7 @@ import scipy.ndimage as img
 import scipy.spatial as spatial
 import argparse
 import pandas as pd
+from annotate import *
 
 def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distance):
     orig = tf.TiffFile(image_handle)
@@ -47,6 +48,17 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
                            'red_intensity': red_scores})
     return scores
 
+
+def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius):
+    im = tf.TiffFile(livedead_fn)[channel].asarray()
+    surface = surface_from_array(im)
+    rows = len(singlets)
+    foo = lambda x: np.asarray(x).reshape(-1,1)
+    cell_matrix = np.hstack([foo(singlets['x']), foo(singlets['y']), np.ones((rows, 1))])
+    surface = annotate_cells(surface, cell_matrix, cell_radius, (1.0, 0.0, 0.0), linewidth=2)
+    img = PIL_from_surface(surface)
+    img.save(annotate_fn)
+
 def main():
     parser = argparse.ArgumentParser(description='Process live/dead images.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -61,6 +73,8 @@ def main():
                         help='Recognize cells with areas on [min, max), in live/dead pixel units.')
     parser.add_argument('--distance', '-d', default=25, type=float,
                         help='Minimum acceptable separation (in pixels) between cells.')
+    parser.add_argument('--annotate', '-a', type=str,
+                        help='Filename for annotated live/dead image.')
     parser.add_argument('--output', '-o', default='livedead_results.txt',
                         help='Filename to save information about the live/dead image.')
     args = parser.parse_args()
@@ -71,6 +85,10 @@ def main():
                            channel=args.channel)
     singlets.to_csv(args.output, index=False)
     print 'Found {} singlets.'.format(len(singlets))
+
+    if args.annotate:
+        r = np.sqrt(args.cell_size[1]/np.pi)
+        annotate_ld(args.livedead, args.annotate, args.channel, singlets, 2*r)
 
 if __name__ == '__main__':
     main()

@@ -2,10 +2,10 @@ import cairo
 import numpy as np
 from PIL import Image
 
-def annotate_cells(cairo_surface, cell_xyz, radius, rgb):
+def annotate_cells(cairo_surface, cell_xyz, radius, rgb, linewidth=5):
     cr = cairo.Context(cairo_surface)
     cr.set_source_rgb(*rgb)
-    cr.set_line_width(5)
+    cr.set_line_width(linewidth)
     for x, y, z in list(cell_xyz):
         cr.arc(x, y, radius, 0, 2*np.pi)
         cr.stroke()
