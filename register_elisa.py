@@ -11,6 +11,7 @@ import argparse
 import pandas as pd
 from PIL import Image
 from shapely.geometry import Polygon, Point
+from annotate import annotate_cells, surface_from_array, PIL_from_surface
 
 def tx_matrix(from_points, to_points):
     # from_points and to_points are nx3 matrices
@@ -36,30 +37,11 @@ def tx_matrix_from_rois(livedead_roi, elisa_roi, plot_filename=None):
         fig.savefig(plot_filename)
     return tx
 
-def surface_from_array(a):
-    minval = a[a.nonzero()].min()
-    maxval = a.max()
-    image_data = a - minval
-    image_data *= 255.0/(maxval-minval)
-    image_data = image_data.astype(np.uint8)
-    cairo_image_data = np.dstack([image_data, image_data, image_data, np.ones_like(image_data)*255])
-    surface = cairo.ImageSurface.create_for_data(cairo_image_data, cairo.FORMAT_ARGB32, *(reversed(image_data.shape)))
-    return surface
-
 def in_bounds(x, radius, shape):
     return ((x[:,0] - radius >= 0) &
             (x[:,0] + radius < shape[1]) &
             (x[:,1] - radius >= 0) &
             (x[:,1] + radius < shape[0]))
-
-def annotate_cells(cairo_surface, cell_xyz, radius, rgb):
-    cr = cairo.Context(cairo_surface)
-    cr.set_source_rgb(*rgb)
-    cr.set_line_width(5)
-    for x, y, z in list(cell_xyz):
-        cr.arc(x, y, radius, 0, 2*np.pi)
-        cr.stroke()
-    return cairo_surface
 
 def measure_cells(data, cells, radius):
     def circle(rad):
@@ -135,9 +117,7 @@ def main():
 
     surface = surface_from_array(data)
     surface = annotate_cells(surface, tx_cells, args.well_radius, (1.0, 0.0, 0.0))
-
-    h, w = data.shape
-    pil_image = Image.frombuffer("RGBA", (w, h), surface.get_data(), "raw", "BGRA", 0, 1)
+    pil_image = PIL_from_surface(surface)
     pil_image.save("annotated.jpg")
 
     stats = measure_cells(data, tx_cells, args.well_radius)
