@@ -85,7 +85,7 @@ def main():
     parser.add_argument('livedead', metavar='livedead_results.txt',
                         help='Output of id_singlets.py.')
     parser.add_argument('livedead_roi', metavar='livedead-RoiSet.zip')
-    parser.add_argument('elisa', metavar='elisa.tif', type=argparse.FileType('rb'),
+    parser.add_argument('elisa', metavar='stitched_elisa.tif', type=argparse.FileType('rb'),
                         help='Stitched ELISA image, post background subtraction.')
     parser.add_argument('elisa_roi', metavar='elisa-RoiSet.zip')
     parser.add_argument('--well-radius', default=50,
