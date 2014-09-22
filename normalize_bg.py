@@ -37,7 +37,7 @@ ar[ar < 0] = 0
 ar = ar.astype(np.uint16)
 
 print 'Writing normalized image'
-with tf.TiffWriter('output.tif', bigtiff=True) as out:
+with tf.TiffWriter('normalized.tif') as out:
     for i in range(n):
         if (i % 100) == 0:
             print i,
