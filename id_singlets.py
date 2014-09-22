@@ -62,7 +62,7 @@ def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius):
 def main():
     parser = argparse.ArgumentParser(description='Process live/dead images.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('livedead', metavar='livedead.tif',
+    parser.add_argument('livedead', metavar='stitched_livedead.tif',
                         help='Stitched live/dead image, in TIFF format.')
     parser.add_argument('--threshold', '-t', required=True, type=int,
                         help='Threshold on [0, 4096) for live/dead image.')
