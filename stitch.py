@@ -54,4 +54,4 @@ for i in xrange(len(ims)):
     canvas[r_px:r_px+h, c_px:c_px+w] += ims[i] * fade
 
 print('\nSaving image.')
-tf.imsave('stitched.tif', canvas)
+tf.imsave('stitched_elisa.tif', canvas)
