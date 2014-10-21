@@ -88,7 +88,7 @@ def main():
     parser.add_argument('elisa', metavar='stitched_elisa.tif', type=argparse.FileType('rb'),
                         help='Stitched ELISA image, post background subtraction.')
     parser.add_argument('elisa_roi', metavar='elisa-RoiSet.zip')
-    parser.add_argument('--well-radius', default=50,
+    parser.add_argument('--well-radius', default=50, type=int,
                         help='ELISA well radius, in pixels.')
     parser.add_argument('--tx-plot', '-t', default='transform.png',
                         help='Filename for transformation plot.')
