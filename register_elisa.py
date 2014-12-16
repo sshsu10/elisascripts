@@ -62,6 +62,21 @@ def measure_cells(data, cells, radius):
         stats[i,:] = mean, sd, maxv, minv, integ, lq, median, uq
     return stats
 
+def recenter(data, cells, radius):
+    def circle(rad):
+        y, x = np.ogrid[-rad:rad, -rad:rad]
+        mask = x*x + y*y <= rad*rad
+        return np.ones((2*rad, 2*rad)) * mask
+    mask = circle(radius) == 0
+    for i, (x, y, z) in enumerate(list(cells)):
+        region = data[y-radius:y+radius, x-radius:x+radius]
+        if mask.shape != region.shape: continue
+        region = np.ma.array(region, mask=mask)
+        com = img.measurements.center_of_mass(region)
+        if not np.isnan(com).any():
+            cells[i,:2] += ((com[1], com[0]) - np.array([radius, radius])) * 1.5
+    return cells
+
 def filter_excluded(cells, roiset_fn):
     rois = readroi.read_roi_zip(roiset_fn)
     shapes = []
@@ -105,7 +120,7 @@ def main():
     print "Loaded {} cells.".format(tx_cells.shape[0])
 
     data = tf.TiffFile(args.elisa)[0].asarray()
-    row_idx = np.nonzero(in_bounds(tx_cells, args.well_radius, data.shape))[0]
+    row_idx = np.nonzero(in_bounds(tx_cells, args.well_radius*1.5, data.shape))[0]
     tx_cells = tx_cells[row_idx]
     print "Kept {} in-bounds cells.".format(tx_cells.shape[0])
 
@@ -115,10 +130,17 @@ def main():
         tx_cells = tx_cells[not_excluded]
     print "Kept {} cells not excluded.".format(tx_cells.shape[0])
 
-    surface = surface_from_array(data)
-    surface = annotate_cells(surface, tx_cells, args.well_radius, (1.0, 0.0, 0.0))
-    pil_image = PIL_from_surface(surface)
-    pil_image.save("annotated.jpg")
+    orig_cells = tx_cells.copy()
+
+    for i in range(5):
+        surface = surface_from_array(data)
+        surface = annotate_cells(surface, orig_cells, args.well_radius, (1.0, 0.0, 0.0))
+        if i > 0:
+            surface = annotate_cells(surface, tx_cells, args.well_radius, (0.0, 0.0, 1.0))
+        pil_image = PIL_from_surface(surface)
+        pil_image.save("annotated.{}.jpg".format(i))
+        np.savetxt("locations.{}.txt".format(i), tx_cells)
+        tx_cells = recenter(data, tx_cells, 1.5*args.well_radius)
 
     stats = measure_cells(data, tx_cells, args.well_radius)
     out = np.hstack([row_idx.reshape((-1,1)), tx_cells[:,:2], stats])
