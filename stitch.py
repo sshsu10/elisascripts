@@ -1,8 +1,11 @@
-import tifffile as tf
-import sys
-import numpy as np
+import argparse
 import operator
+import sys
 
+import tifffile as tf
+import numpy as np
+
+_description = "Assembles an xyp image stack into a large x,y image."
 
 def stitch(metadata, ims):
     grid_index = [(p['GridRowIndex'], p['GridColumnIndex']) for p in
@@ -15,18 +18,11 @@ def stitch(metadata, ims):
     h = metadata['summary']['Height']
     w = metadata['summary']['Width']
 
-    # deleteme
-    #N_row, N_col = 10, 10
-    #h, w = 256, 336
-
     H = int((0.9*(N_row-1) + 1) * h)
     W = int((0.9*(N_col-1) + 1) * w)
 
     print("Making a {}x{} image.".format(W, H))
     canvas = np.zeros((H, W), np.uint16)
-
-    #ims = np.ones((100, h, w)) * 255 # deleteme
-    #grid_index = zip(range(10)*10, reduce(operator.add, [[i]*10 for i in range(10)]))
 
     h_margin = int(0.1*h)
     w_margin = int(0.1*w)
@@ -49,8 +45,20 @@ def stitch(metadata, ims):
     return canvas
 
 def main():
-    orig_fn = sys.argv[1]
-    bgsub_fn = sys.argv[2]
+    parser = argparse.ArgumentParser(description=_description)
+    parser.add_argument('--output', '-o', metavar='stitched_elisa.tif',
+                        default='stitched_elisa.tif')
+    parser.add_argument('--saturationmap', '-s', metavar='saturated_elisa.tif',
+                        default='saturated_elisa.tif')
+    parser.add_argument(
+            'original_image',
+            help="Original MicroManager stack (used for metadata)")
+    parser.add_argument(
+            'normalized_image',
+            help="Normalized image (used for image data)")
+    args = parser.parse_args()
+    orig_fn = args.original_image
+    bgsub_fn = args.normalized_image
     print 'Reading metadata.'
     with open(orig_fn, 'rb') as f:
         metadata = tf.read_micromanager_metadata(f)
@@ -58,13 +66,13 @@ def main():
     bgsub = tf.imread(bgsub_fn)
     canvas = stitch(metadata, bgsub)
     print('Saving image.')
-    tf.imsave('stitched_elisa.tif', canvas)
+    tf.imsave(args.output, canvas)
     del canvas, bgsub
-    print('Computing saturation image.')
+    print('Computing saturation map.')
     orig = tf.imread(orig_fn)
     saturated = (orig == 4095)
     canvas = (stitch(metadata, saturated) > 0).astype(np.uint8)
-    tf.imsave('saturated_elisa.tif', canvas)
+    tf.imsave(args.saturationmap, canvas)
 
 if __name__ == '__main__':
     main()
