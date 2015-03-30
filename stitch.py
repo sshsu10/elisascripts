@@ -18,19 +18,23 @@ def stitch(metadata, ims):
     h = metadata['summary']['Height']
     w = metadata['summary']['Width']
 
-    H = int((0.9*(N_row-1) + 1) * h)
-    W = int((0.9*(N_col-1) + 1) * w)
+    f = lambda N, dim: int((0.9*N + 0.1) * dim)
+
+    H = f(N_row, h)
+    W = f(N_col, w)
 
     print("Making a {}x{} image.".format(W, H))
     canvas = np.zeros((H, W), np.uint16)
 
-    h_margin = int(0.1*h)
-    w_margin = int(0.1*w)
+    h_margin = np.rint(0.1*h)
+    w_margin = np.rint(0.1*w)
     fade = np.ones((h, w), np.double)
-    fade[:h_margin,:] *= np.arange(h_margin, dtype=np.double).reshape(-1,1)/h_margin
-    fade[h-h_margin:,:] *= np.arange(h_margin-1, -1, -1, dtype=np.double).reshape(-1,1)/h_margin
-    fade[:,:w_margin] *= np.arange(w_margin, dtype=np.double).reshape(1,-1)/w_margin
-    fade[:,w-w_margin:] *= np.arange(w_margin-1, -1, -1, dtype=np.double).reshape(1,-1)/w_margin
+    h_ascending = np.linspace(0, 1, h_margin+1, endpoint=False)[1:].reshape(-1, 1)
+    fade[:h_margin,:] *= h_ascending
+    fade[h-h_margin:,:] *= 1-h_ascending
+    w_ascending = np.linspace(0, 1, w_margin+1, endpoint=False)[1:].reshape(1, -1)
+    fade[:,:w_margin] *= w_ascending
+    fade[:,w-w_margin:] *= 1-w_ascending
 
     print('Stitching...')
     for i in xrange(len(ims)):
@@ -38,9 +42,9 @@ def stitch(metadata, ims):
             print i,
             sys.stdout.flush()
         r_n, c_n = grid_index[i]
-        r_px = H - int((1 + 0.9*r_n)*h)
-        c_px = W - int((1 + 0.9*c_n)*w)
-        canvas[r_px:r_px+h, c_px:c_px+w] += ims[i] * fade
+        r_px = r_n * (0.9 * h)
+        c_px = c_n * (0.9 * w)
+        canvas[r_px:r_px+h, c_px:c_px+w] += np.rint(ims[i] * fade)
     print
     return canvas
 
