@@ -42,8 +42,8 @@ def stitch(metadata, ims):
             print i,
             sys.stdout.flush()
         r_n, c_n = grid_index[i]
-        r_px = r_n * (0.9 * h)
-        c_px = c_n * (0.9 * w)
+        r_px = (N_row - 1 - r_n) * (0.9 * h)
+        c_px = (N_col - 1 - c_n) * (0.9 * w)
         canvas[r_px:r_px+h, c_px:c_px+w] += np.rint(ims[i] * fade)
     print
     return canvas
