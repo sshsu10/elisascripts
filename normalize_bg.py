@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 
-import tifffile as tf
+import tifffile.tifffile as tf
 import numpy as np
 
 _description = """Normalizes image stacks against background.
