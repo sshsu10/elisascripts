@@ -67,13 +67,15 @@ def main():
     with open(orig_fn, 'rb') as f:
         metadata = tf.read_micromanager_metadata(f)
     print('Loading original image.')
-    bgsub = tf.imread(bgsub_fn)
+    with tf.TiffFile(bgsub_fn) as bgsub_img:
+        bgsub = np.concatenate([page.asarray()[np.newaxis,:] for page in bgsub_img.pages])
     canvas = stitch(metadata, bgsub)
     print('Saving image.')
     tf.imsave(args.output, canvas)
     del canvas, bgsub
     print('Computing saturation map.')
-    orig = tf.imread(orig_fn)
+    with tf.TiffFile(orig_fn) as bgsub_img:
+        orig = np.concatenate([page.asarray()[np.newaxis,:] for page in bgsub_img.pages])
     saturated = (orig == 4095)
     canvas = (stitch(metadata, saturated) > 0).astype(np.uint8)
     tf.imsave(args.saturationmap, canvas)

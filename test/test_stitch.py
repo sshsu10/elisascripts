@@ -1,4 +1,8 @@
+import os
+import subprocess
+
 import numpy as np
+import py.path
 from tifffile import tifffile as tf
 
 import stitch
@@ -35,3 +39,13 @@ def test_2x2(tmpdir):
     tf.imsave(str(tmpdir.join('2x2.tif')), canvas)
     delta = np.abs(canvas[11:-11, 11:-11].astype(np.int32) - 128)
     assert np.all(delta < 2)
+
+def test_ruler(tmpdir):
+    ruler = str(py.path.local(__file__).dirpath().join("ruler3_1_MMStack.ome.tif"))
+    with tmpdir.as_cwd():
+        subprocess.check_call([
+            "python",
+            "-m",
+            "stitch",
+            ruler,
+            ruler])
