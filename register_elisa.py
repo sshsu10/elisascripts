@@ -5,7 +5,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scipy as sp
 import scipy.ndimage as img
-import readroi
+import ijroi
 import cairo
 import argparse
 import pandas as pd
@@ -23,7 +23,7 @@ def tx_matrix(from_points, to_points):
 
 def tx_matrix_from_rois(livedead_roi, elisa_roi, plot_filename=None):
     def prep_rois(fn):
-        rois = readroi.read_roi_zip(fn)
+        rois = ijroi.read_roi_zip(fn)
         rois = np.vstack([roi[1] for roi in rois])
         rois = np.hstack((rois, np.ones((len(rois), 1))))
         return rois
@@ -78,7 +78,7 @@ def recenter(data, cells, radius):
     return cells
 
 def filter_excluded(cells, roiset_fn):
-    rois = readroi.read_roi_zip(roiset_fn)
+    rois = ijroi.read_roi_zip(roiset_fn)
     shapes = []
     for roi in rois:
         shapes.append(Polygon(list([list(i) for i in roi[1]])))
