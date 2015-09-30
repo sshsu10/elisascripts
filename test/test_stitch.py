@@ -1,5 +1,5 @@
 import numpy as np
-import tifffile as tf
+from tifffile import tifffile as tf
 
 import stitch
 

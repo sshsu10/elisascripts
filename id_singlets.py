@@ -1,4 +1,4 @@
-import tifffile as tf
+from tifffile import tifffile as tf
 import numpy as np
 import scipy as sp
 import scipy.ndimage as img

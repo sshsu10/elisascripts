@@ -2,7 +2,7 @@ import argparse
 import operator
 import sys
 
-import tifffile as tf
+from tifffile import tifffile as tf
 import numpy as np
 
 _description = "Assembles an xyp image stack into a large x,y image."
