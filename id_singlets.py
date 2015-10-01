@@ -7,7 +7,11 @@ import argparse
 import pandas as pd
 from annotate import *
 
-def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distance):
+not_singlet_filter = lambda distances, min_distance: np.any((distances > 0) & (distances < min_distance), axis=1)
+not_doublet_filter = lambda distances, min_distance: np.sum((distances > 0) & (distances < min_distance), axis=1) != 1
+
+
+def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distance, reject=not_singlet_filter):
     orig = tf.TiffFile(image_handle)
     red, green = orig
     spots = (orig[channel]).asarray() > threshold
@@ -17,9 +21,9 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
     # keep singlets (i.e. cells separated by at least min_distance)
     centers = np.array(img.center_of_mass(labels, labels, xrange(1, n_spots+1)))
     distances = spatial.distance_matrix(centers, centers)
-    doublets = np.any((distances > 0) & (distances < min_distance), axis=1)
+    dx_rejects = reject(distances, min_distance)
     slices = img.find_objects(labels)
-    for i in np.flatnonzero(doublets):
+    for i in np.flatnonzero(dx_rejects):
         this_slice = labels[slices[i]]
         this_slice[this_slice == i+1] = 0
     labels, n_singlets = img.label(labels)
@@ -49,13 +53,17 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
     return scores
 
 
-def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius):
+def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius, doublets=None):
     im = tf.TiffFile(livedead_fn)[channel].asarray()
     surface = surface_from_array(im)
-    rows = len(singlets)
-    foo = lambda x: np.asarray(x).reshape(-1,1)
-    cell_matrix = np.hstack([foo(singlets['x']), foo(singlets['y']), np.ones((rows, 1))])
-    surface = annotate_cells(surface, cell_matrix, cell_radius, (1.0, 0.0, 0.0), linewidth=2)
+    worklist = [(singlets, (1., 0., 0.))]
+    if doublets is not None:
+        worklist.append((doublets, (0., 1., 0.)))
+    for cells, color in worklist:
+        rows = len(cells)
+        foo = lambda x: np.asarray(x).reshape(-1,1)
+        cell_matrix = np.hstack([foo(cells['x']), foo(cells['y']), np.ones((rows, 1))])
+        surface = annotate_cells(surface, cell_matrix, cell_radius, color, linewidth=2)
     img = PIL_from_surface(surface)
     img.save(annotate_fn)
 
@@ -77,6 +85,8 @@ def main():
                         help='Filename for annotated live/dead image.')
     parser.add_argument('--output', '-o', default='livedead_results.txt',
                         help='Filename to save information about the live/dead image.')
+    parser.add_argument('--doublets',
+                        help='Filename to save positions of doublets in live/dead image.')
     args = parser.parse_args()
 
     print 'Identifying singlets...'
@@ -86,9 +96,18 @@ def main():
     singlets.to_csv(args.output, index=False)
     print 'Found {} singlets.'.format(len(singlets))
 
+    if args.doublets:
+        print 'Identifying doublets...'
+        doublets = id_singlets(args.livedead, threshold=args.threshold, min_distance=args.distance,
+                               min_size=args.cell_size[0], max_size=args.cell_size[1],
+                               channel=args.channel, reject=not_doublet_filter)
+        doublets.to_csv(args.doublets, index=False)
+        print 'Found {} doublets.'.format(len(doublets))
+
     if args.annotate:
         r = np.sqrt(args.cell_size[1]/np.pi)
-        annotate_ld(args.livedead, args.annotate, args.channel, singlets, 2*r)
+        annotate_ld(args.livedead, args.annotate, args.channel, singlets, 2*r,
+                    doublets=doublets if args.doublets else None)
 
 if __name__ == '__main__':
     main()
