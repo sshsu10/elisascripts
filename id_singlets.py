@@ -13,8 +13,15 @@ not_doublet_filter = lambda distances, min_distance: np.sum((distances > 0) & (d
 
 def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distance, reject=not_singlet_filter):
     orig = tf.TiffFile(image_handle)
-    red, green = orig
-    spots = (orig[channel]).asarray() > threshold
+    if orig.asarray().ndim == 3:
+        is_3d = True
+        red, green = orig
+        spot_image = orig[channel]
+    else:
+        is_3d = False
+        green, red = orig, None
+        spot_image = orig
+    spots = spot_image.asarray() > threshold
     labels, n_spots = img.label(spots)
     print "Found {} spots.".format(n_spots)
 
@@ -43,13 +50,15 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
     indices = range(1, n_cells+1)
     centers = np.array(img.center_of_mass(labels, labels, indices))
     green_scores = img.sum(green.asarray(), labels, indices)
-    red_scores = img.sum(red.asarray(), labels, indices)
     areas = img.sum(spots, labels, indices)
-    scores = pd.DataFrame({'x': centers[:,1] if len(centers) else [],
-                           'y': centers[:,0] if len(centers) else [],
-                           'area': areas,
-                           'green_intensity': green_scores,
-                           'red_intensity': red_scores})
+    data = {'x': centers[:,1] if len(centers) else [],
+            'y': centers[:,0] if len(centers) else [],
+            'area': areas,
+            'green_intensity': green_scores}
+    if is_3d:
+        red_scores = img.sum(red.asarray(), labels, indices)
+        data['red_intensity'] = red_scores
+    scores = pd.DataFrame(data)
     return scores
 
 
