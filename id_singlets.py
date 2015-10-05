@@ -63,7 +63,9 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
 
 
 def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius, doublets=None):
-    im = tf.TiffFile(livedead_fn)[channel].asarray()
+    im = tf.TiffFile(livedead_fn).asarray()
+    if im.ndim == 3:
+        im = im[channel]
     surface = surface_from_array(im)
     worklist = [(singlets, (1., 0., 0.))]
     if doublets is not None:
