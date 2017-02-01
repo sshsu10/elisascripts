@@ -1,0 +1,36 @@
+language: generic
+
+addons:
+  apt:
+    packages:
+      - python-dev
+      - python-cairo
+      - python-numpy
+      - python-scipy
+      - python-matplotlib
+      - python-pandas
+      - python-pil
+      - python-shapely
+      - python-tornado
+      - python-pip
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: false
+      env:
+        - BASEPYTHON=/usr/bin/python2.7
+    - os: osx
+      osx_image: xcode8.2
+      env:
+        - BASEPYTHON=python2.7
+      before_install:
+        - brew update && brew upgrade
+        - brew install py2cairo geos libtiff
+
+install:
+  - pip install --user tox
+
+script:
+  - $BASEPYTHON -m tox

@@ -4,7 +4,7 @@ import numpy as np
 import py.path
 from tifffile import tifffile as tf
 
-import stitch
+from elisa import stitch
 
 
 def test_1x1(tmpdir):
@@ -49,6 +49,6 @@ def test_ruler(tmpdir):
         subprocess.check_call([
             "python",
             "-m",
-            "stitch",
+            "elisa.stitch",
             ruler,
             ruler])

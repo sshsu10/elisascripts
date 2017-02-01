@@ -8,7 +8,7 @@ import scipy.ndimage as img
 import tifffile as tf
 from shapely.geometry import Polygon, Point
 
-from annotate import annotate_cells, surface_from_array, PIL_from_surface
+from elisa.annotate import annotate_cells, surface_from_array, PIL_from_surface
 
 
 def tx_matrix(from_points, to_points):

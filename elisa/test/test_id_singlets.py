@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from tifffile import tifffile as tf
 
-import id_singlets
+from elisa import id_singlets
 
 
 class TestIdSinglets(object):
@@ -45,7 +45,7 @@ class TestIdSinglets(object):
             subprocess.check_call([
                 "python",
                 "-m",
-                "id_singlets",
+                "elisa.id_singlets",
                 "--threshold",
                 "128",
                 "--cell-size",

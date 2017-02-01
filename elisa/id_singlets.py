@@ -6,7 +6,7 @@ import scipy.ndimage as img
 import scipy.spatial as spatial
 from tifffile import tifffile as tf
 
-from annotate import surface_from_array, annotate_cells, PIL_from_surface
+from elisa.annotate import surface_from_array, annotate_cells, PIL_from_surface
 
 
 def not_singlet_filter(distances, min_distance):
