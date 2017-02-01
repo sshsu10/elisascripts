@@ -1,5 +1,4 @@
 import argparse
-import operator
 import sys
 
 from tifffile import tifffile as tf
@@ -7,9 +6,10 @@ import numpy as np
 
 _description = "Assembles an xyp image stack into a large x,y image."
 
+
 def stitch(metadata, ims):
     grid_index = [(p['GridRowIndex'], p['GridColumnIndex']) for p in
-            metadata['summary']['InitialPositionList']]
+                  metadata['summary']['InitialPositionList']]
 
     # starts at (0,0)
     N_row = max([i[0] for i in grid_index]) + 1
@@ -18,10 +18,11 @@ def stitch(metadata, ims):
     h = metadata['summary']['Height']
     w = metadata['summary']['Width']
 
-    f = lambda N, dim: int((0.9*N + 0.1) * dim)
+    def stitched_dimension(N, nominal):
+        return int((0.9*N + 0.1) * nominal)
 
-    H = f(N_row, h)
-    W = f(N_col, w)
+    H = stitched_dimension(N_row, h)
+    W = stitched_dimension(N_col, w)
 
     print("Making a {}x{} image.".format(W, H))
     canvas = np.zeros((H, W), np.uint16)
@@ -30,11 +31,11 @@ def stitch(metadata, ims):
     w_margin = np.rint(0.1*w).astype(int)
     fade = np.ones((h, w), np.double)
     h_ascending = np.linspace(0, 1, h_margin+1, endpoint=False)[1:].reshape(-1, 1)
-    fade[:h_margin,:] *= h_ascending
-    fade[h-h_margin:,:] *= 1-h_ascending
+    fade[:h_margin, :] *= h_ascending
+    fade[h-h_margin:, :] *= 1-h_ascending
     w_ascending = np.linspace(0, 1, w_margin+1, endpoint=False)[1:].reshape(1, -1)
-    fade[:,:w_margin] *= w_ascending
-    fade[:,w-w_margin:] *= 1-w_ascending
+    fade[:, :w_margin] *= w_ascending
+    fade[:, w-w_margin:] *= 1-w_ascending
 
     print('Stitching...')
     for i in xrange(len(ims)):
@@ -48,6 +49,7 @@ def stitch(metadata, ims):
     print
     return canvas
 
+
 def main():
     parser = argparse.ArgumentParser(description=_description)
     parser.add_argument('--output', '-o', metavar='stitched_elisa.tif',
@@ -55,11 +57,11 @@ def main():
     parser.add_argument('--saturationmap', '-s', metavar='saturated_elisa.tif',
                         default='saturated_elisa.tif')
     parser.add_argument(
-            'original_image',
-            help="Original MicroManager stack (used for metadata)")
+        'original_image',
+        help="Original MicroManager stack (used for metadata)")
     parser.add_argument(
-            'normalized_image',
-            help="Normalized image (used for image data)")
+        'normalized_image',
+        help="Normalized image (used for image data)")
     args = parser.parse_args()
     orig_fn = args.original_image
     bgsub_fn = args.normalized_image
@@ -68,17 +70,18 @@ def main():
         metadata = tf.read_micromanager_metadata(f)
     print('Loading original image.')
     with tf.TiffFile(bgsub_fn) as bgsub_img:
-        bgsub = np.concatenate([page.asarray()[np.newaxis,:] for page in bgsub_img.pages])
+        bgsub = np.concatenate([page.asarray()[np.newaxis, :] for page in bgsub_img.pages])
     canvas = stitch(metadata, bgsub)
     print('Saving image.')
     tf.imsave(args.output, canvas)
     del canvas, bgsub
     print('Computing saturation map.')
     with tf.TiffFile(orig_fn) as bgsub_img:
-        orig = np.concatenate([page.asarray()[np.newaxis,:] for page in bgsub_img.pages])
+        orig = np.concatenate([page.asarray()[np.newaxis, :] for page in bgsub_img.pages])
     saturated = (orig == 4095)
     canvas = (stitch(metadata, saturated) > 0).astype(np.uint8)
     tf.imsave(args.saturationmap, canvas)
+
 
 if __name__ == '__main__':
     main()

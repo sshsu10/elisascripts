@@ -1,17 +1,25 @@
-from tifffile import tifffile as tf
+import argparse
+
 import numpy as np
-import scipy as sp
+import pandas as pd
 import scipy.ndimage as img
 import scipy.spatial as spatial
-import argparse
-import pandas as pd
-from annotate import *
+from tifffile import tifffile as tf
 
-not_singlet_filter = lambda distances, min_distance: np.any((distances > 0) & (distances < min_distance), axis=1)
-not_doublet_filter = lambda distances, min_distance: np.sum((distances > 0) & (distances < min_distance), axis=1) != 1
+from annotate import surface_from_array, annotate_cells, PIL_from_surface
 
 
-def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distance, reject=not_singlet_filter):
+def not_singlet_filter(distances, min_distance):
+    return np.any((distances > 0) & (distances < min_distance), axis=1)
+
+
+def not_doublet_filter(distances, min_distance):
+    return np.sum((distances > 0) & (distances < min_distance), axis=1) != 1
+
+
+def id_singlets(image_handle, channel, threshold,
+                min_size, max_size, min_distance,
+                reject=not_singlet_filter):
     orig = tf.TiffFile(image_handle)
     if orig.asarray().ndim == 3:
         is_3d = True
@@ -42,7 +50,8 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
     slices = img.find_objects(labels)
     # iterate over the indices of the spots; blank rejected spots
     for i in xrange(1, n_singlets+1):
-        if i in cells: continue
+        if i in cells:
+            continue
         this_slice = labels[slices[i-1]]
         this_slice[this_slice == i] = 0
     labels, n_cells = img.label(labels)
@@ -51,8 +60,8 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
     centers = np.array(img.center_of_mass(labels, labels, indices))
     green_scores = img.sum(green.asarray(), labels, indices)
     areas = img.sum(spots, labels, indices)
-    data = {'x': centers[:,1] if len(centers) else [],
-            'y': centers[:,0] if len(centers) else [],
+    data = {'x': centers[:, 1] if len(centers) else [],
+            'y': centers[:, 0] if len(centers) else [],
             'area': areas,
             'green_intensity': green_scores}
     if is_3d:
@@ -63,6 +72,9 @@ def id_singlets(image_handle, channel, threshold, min_size, max_size, min_distan
 
 
 def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius, doublets=None):
+    def col(x):
+        return np.asarray(x).reshape(-1, 1)
+
     im = tf.TiffFile(livedead_fn).asarray()
     if im.ndim == 3:
         im = im[channel]
@@ -72,11 +84,11 @@ def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius, double
         worklist.append((doublets, (0., 1., 0.)))
     for cells, color in worklist:
         rows = len(cells)
-        foo = lambda x: np.asarray(x).reshape(-1,1)
-        cell_matrix = np.hstack([foo(cells['x']), foo(cells['y']), np.ones((rows, 1))])
+        cell_matrix = np.hstack([col(cells['x']), col(cells['y']), np.ones((rows, 1))])
         surface = annotate_cells(surface, cell_matrix, cell_radius, color, linewidth=2)
     img = PIL_from_surface(surface)
     img.save(annotate_fn)
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process live/dead images.',
@@ -119,6 +131,7 @@ def main():
         r = np.sqrt(args.cell_size[1]/np.pi)
         annotate_ld(args.livedead, args.annotate, args.channel, singlets, 2*r,
                     doublets=doublets if args.doublets else None)
+
 
 if __name__ == '__main__':
     main()

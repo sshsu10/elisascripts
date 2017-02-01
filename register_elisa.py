@@ -1,25 +1,24 @@
-import numpy as np
-import numpy.linalg
-import tifffile as tf
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import scipy as sp
-import scipy.ndimage as img
-import ijroi
-import cairo
 import argparse
+
+import ijroi
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from PIL import Image
+import scipy.ndimage as img
+import tifffile as tf
 from shapely.geometry import Polygon, Point
+
 from annotate import annotate_cells, surface_from_array, PIL_from_surface
+
 
 def tx_matrix(from_points, to_points):
     # from_points and to_points are nx3 matrices
     # the third column should be 1s
-    x_tx,_,_,_ = np.linalg.lstsq(from_points, to_points[:,0])
-    y_tx,_,_,_ = np.linalg.lstsq(from_points, to_points[:,1])
-    tx = np.vstack((x_tx.reshape((1,-1)), y_tx.reshape((1,-1)), [[0, 0, 1]]))
+    x_tx, _, _, _ = np.linalg.lstsq(from_points, to_points[:, 0])
+    y_tx, _, _, _ = np.linalg.lstsq(from_points, to_points[:, 1])
+    tx = np.vstack((x_tx.reshape((1, -1)), y_tx.reshape((1, -1)), [[0, 0, 1]]))
     return tx
+
 
 def tx_matrix_from_rois(livedead_roi, elisa_roi, plot_filename=None):
     def prep_rois(fn):
@@ -33,15 +32,17 @@ def tx_matrix_from_rois(livedead_roi, elisa_roi, plot_filename=None):
     transformed = np.dot(tx, cell_cx.T).T
     if plot_filename:
         fig, ax = plt.subplots()
-        ax.plot(elisa_cx[:,0], elisa_cx[:,1], 'o', transformed[:,0], transformed[:,1], 'r.')
+        ax.plot(elisa_cx[:, 0], elisa_cx[:, 1], 'o', transformed[:, 0], transformed[:, 1], 'r.')
         fig.savefig(plot_filename)
     return tx
 
+
 def in_bounds(x, radius, shape):
-    return ((x[:,0] - radius >= 0) &
-            (x[:,0] + radius < shape[1]) &
-            (x[:,1] - radius >= 0) &
-            (x[:,1] + radius < shape[0]))
+    return ((x[:, 0] - radius >= 0) &
+            (x[:, 0] + radius < shape[1]) &
+            (x[:, 1] - radius >= 0) &
+            (x[:, 1] + radius < shape[0]))
+
 
 def measure_cells(data, cells, radius):
     def circle(rad):
@@ -54,13 +55,15 @@ def measure_cells(data, cells, radius):
     for i, (x, y, z) in enumerate(list(cells)):
         region = data[y-radius:y+radius, x-radius:x+radius]
         region = np.ma.array(region, mask=mask)
-        mean, sd, maxv, minv, integ = region.mean(), region.std(), region.max(), region.min(), region.sum()
+        mean, sd, maxv, minv = region.mean(), region.std(), region.max(), region.min()
+        integ = region.sum()
         valid = region.compressed()
         lq = np.percentile(valid, 0.25)
         median = np.percentile(valid, 0.5)
         uq = np.percentile(valid, 0.75)
-        stats[i,:] = mean, sd, maxv, minv, integ, lq, median, uq
+        stats[i, :] = mean, sd, maxv, minv, integ, lq, median, uq
     return stats
+
 
 def recenter(data, cells, radius):
     def circle(rad):
@@ -70,12 +73,14 @@ def recenter(data, cells, radius):
     mask = circle(radius) == 0
     for i, (x, y, z) in enumerate(list(cells)):
         region = data[y-radius:y+radius, x-radius:x+radius]
-        if mask.shape != region.shape: continue
+        if mask.shape != region.shape:
+            continue
         region = np.ma.array(region, mask=mask)
         com = img.measurements.center_of_mass(region)
         if not np.isnan(com).any():
-            cells[i,:2] += ((com[1], com[0]) - np.array([radius, radius])) * 1.5
+            cells[i, :2] += ((com[1], com[0]) - np.array([radius, radius])) * 1.5
     return cells
+
 
 def filter_excluded(cells, roiset_fn):
     rois = ijroi.read_roi_zip(roiset_fn)
@@ -85,7 +90,7 @@ def filter_excluded(cells, roiset_fn):
     keep = []
     for i, (x, y, z) in enumerate(cells):
         good = True
-        p = Point((x,y))
+        p = Point((x, y))
         for shape in shapes:
             if shape.contains(p):
                 good = False
@@ -93,6 +98,7 @@ def filter_excluded(cells, roiset_fn):
         if good:
             keep.append(i)
     return keep
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process single-cell ELISA images.',
@@ -143,9 +149,12 @@ def main():
         tx_cells = recenter(data, tx_cells, 1.5*args.well_radius)
 
     stats = measure_cells(data, tx_cells, args.well_radius)
-    out = np.hstack([row_idx.reshape((-1,1)), tx_cells[:,:2], stats])
+    out = np.hstack([row_idx.reshape((-1, 1)), tx_cells[:, :2], stats])
     header = ['cells_row', 'x', 'y', 'mean', 'sd', 'max', 'min', 'integrated', 'q25', 'q50', 'q75']
-    np.savetxt(args.output, out, delimiter=',', fmt=['%d'] * 3 + ['%f'] * 8, header=','.join(header), comments='')
+    np.savetxt(args.output, out, delimiter=',',
+               fmt=['%d'] * 3 + ['%f'] * 8,
+               header=','.join(header),
+               comments='')
 
 
 if __name__ == '__main__':

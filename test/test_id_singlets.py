@@ -20,20 +20,21 @@ class TestIdSinglets(object):
         a[100:100+size+1, offset:offset+size+1] = 255
 
         # duplicate into second channel
-        im = np.concatenate([a[np.newaxis,:], a[np.newaxis,:]])
+        im = np.concatenate([a[np.newaxis, :], a[np.newaxis, :]])
         filename = tmpdir_factory.mktemp('data').join('img.tif')
         tf.imsave(str(filename), im)
         return filename
 
     def test_counts(self, singlet_image):
-        call = lambda filter: id_singlets.id_singlets(
-            image_handle=str(singlet_image),
-            channel=0,
-            threshold=128,
-            min_size=300,
-            max_size=500,
-            min_distance=50,
-            reject=filter)
+        def call(filter):
+            return id_singlets.id_singlets(
+                image_handle=str(singlet_image),
+                channel=0,
+                threshold=128,
+                min_size=300,
+                max_size=500,
+                min_distance=50,
+                reject=filter)
         singlets = call(id_singlets.not_singlet_filter)
         doublets = call(id_singlets.not_doublet_filter)
         assert len(singlets) == 1

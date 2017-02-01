@@ -2,6 +2,7 @@ import cairo
 import numpy as np
 from PIL import Image
 
+
 def annotate_cells(cairo_surface, cell_xyz, radius, rgb, linewidth=5):
     cr = cairo.Context(cairo_surface)
     cr.set_source_rgb(*rgb)
@@ -11,6 +12,7 @@ def annotate_cells(cairo_surface, cell_xyz, radius, rgb, linewidth=5):
         cr.stroke()
     return cairo_surface
 
+
 def surface_from_array(a):
     minval = a[a.nonzero()].min()
     maxval = a.max()
@@ -18,8 +20,13 @@ def surface_from_array(a):
     image_data *= 255.0/(maxval-minval)
     image_data = image_data.astype(np.uint8)
     cairo_image_data = np.dstack([image_data, image_data, image_data, np.ones_like(image_data)*255])
-    surface = cairo.ImageSurface.create_for_data(cairo_image_data, cairo.FORMAT_ARGB32, *(reversed(image_data.shape)))
+    surface = cairo.ImageSurface.create_for_data(
+        cairo_image_data,
+        cairo.FORMAT_ARGB32,
+        *(reversed(image_data.shape))
+    )
     return surface
+
 
 def PIL_from_surface(surface):
     w = surface.get_width()

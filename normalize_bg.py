@@ -12,12 +12,14 @@ otherwise, computes the background image at each (x,y) location as the 5th
 percentile of that location's value over the image stack.
 """
 
+
 def main():
     parser = argparse.ArgumentParser(description=_description)
     parser.add_argument('--output', '-o', metavar='normalized.tif',
                         default='normalized.tif', help='Output filename')
-    parser.add_argument('--subtract', action='store_true',
-            help='Subtract background instead of dividing and truncating')
+    parser.add_argument(
+        '--subtract', action='store_true',
+        help='Subtract background instead of dividing and truncating')
     parser.add_argument('infile')
     args = parser.parse_args()
 
@@ -68,6 +70,7 @@ def main():
                 sys.stdout.flush()
             out.save(ar[i])
     print
+
 
 if __name__ == "__main__":
     main()
