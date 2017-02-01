@@ -17,7 +17,8 @@ def surface_from_array(a):
     minval = a[a.nonzero()].min()
     maxval = a.max()
     image_data = a.astype(float) - minval
-    image_data *= 255.0/(maxval-minval)
+    value_range = (maxval-minval) or 1
+    image_data *= 255.0/(value_range)
     image_data = image_data.astype(np.uint8)
     cairo_image_data = np.dstack([image_data, image_data, image_data, np.ones_like(image_data)*255])
     surface = cairo.ImageSurface.create_for_data(
