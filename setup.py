@@ -31,6 +31,7 @@ setup(
         'scipy',
         'shapely',
         'tifffile',
+        'typing',
     ],
     entry_points={
         'console_scripts': [

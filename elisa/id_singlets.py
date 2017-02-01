@@ -8,6 +8,9 @@ from tifffile import tifffile as tf
 
 from elisa.annotate import surface_from_array, annotate_cells, PIL_from_surface
 
+from typing import Callable, Union  # noqa:F401
+from typing.io import BinaryIO  # noqa:F401
+
 
 def not_singlet_filter(distances, min_distance):
     return np.any((distances > 0) & (distances < min_distance), axis=1)
@@ -17,9 +20,35 @@ def not_doublet_filter(distances, min_distance):
     return np.sum((distances > 0) & (distances < min_distance), axis=1) != 1
 
 
-def id_singlets(image_handle, channel, threshold,
-                min_size, max_size, min_distance,
-                reject=not_singlet_filter):
+def id_singlets(image_handle,  # type: Union[str, BinaryIO]
+                channel,       # type: int
+                threshold,     # type: int
+                min_size,      # type: int
+                max_size,      # type: int
+                min_distance,  # type: int
+                reject=not_singlet_filter  # type: Callable
+                ):
+    # type: (...) -> pd.DataFrame
+    """Identify singlets in a TIFF image.
+
+    Image stacks are assumed to be a live-dead image with "red" (dead)
+    and "green" (live) color channels.
+
+    Args:
+        image_handle: a Python file object representing a TIFF file or a
+            filename
+        channel: the index of the channel to analyze, for image stacks
+        threshold: an integer intensity value discriminating foreground from
+            background
+        min_size: Minimum size of objects to identify
+        max_size: Maximum size of objecst to identify
+        min_distance: Minimum allowed distance between objects; objects clustered
+            closer together will all be removed
+        reject: Callable accepting args `distances` (dense matrix of distances
+            between each pair of objects) and `min_distance` that returns a
+            1-D boolean array where TRUE describes that the object at that
+            index should be filtered away.
+    """
     orig = tf.TiffFile(image_handle)
     if orig.asarray().ndim == 3:
         is_3d = True
@@ -38,6 +67,7 @@ def id_singlets(image_handle, channel, threshold,
     distances = spatial.distance_matrix(centers, centers)
     dx_rejects = reject(distances, min_distance)
     slices = img.find_objects(labels)
+    # Erase objects that were rejected from the label image and re-label
     for i in np.flatnonzero(dx_rejects):
         this_slice = labels[slices[i]]
         this_slice[this_slice == i+1] = 0
@@ -71,7 +101,18 @@ def id_singlets(image_handle, channel, threshold,
     return scores
 
 
-def annotate_ld(livedead_fn, annotate_fn, channel, singlets, cell_radius, doublets=None):
+def annotate_ld(livedead_fn,   # type: Union[str, BinaryIO]
+                annotate_fn,   # type: str
+                channel,       # type: int
+                singlets,      # type: pd.DataFrame
+                cell_radius,   # type: float
+                doublets=None  # type: Optional[pd.DataFrame]
+                ):
+    # type: (...) -> None
+    """Produce an image with circles around the objects we found.
+
+    Singlets are colored red; doublets are colored green.
+    """
     def col(x):
         return np.asarray(x).reshape(-1, 1)
 

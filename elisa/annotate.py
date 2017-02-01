@@ -2,8 +2,21 @@ import cairo
 import numpy as np
 from PIL import Image
 
+from typing import Tuple  # noqa:F401
 
-def annotate_cells(cairo_surface, cell_xyz, radius, rgb, linewidth=5):
+
+def annotate_cells(cairo_surface,  # type: cairo.ImageSurface
+                   cell_xyz,       # type: np.array  # (Nx3 floats)
+                   radius,         # type: float
+                   rgb,            # type: Tuple[int, int, int]
+                   linewidth=5     # type: int
+                   ):
+    # type: (...) -> cairo.ImageSurface
+    """Draws circles around cells.
+
+    Accepts a Cairo ImageSurface and a Nx3 array of cell locations; gives the
+    modified ImageSurface back.
+    """
     cr = cairo.Context(cairo_surface)
     cr.set_source_rgb(*rgb)
     cr.set_line_width(linewidth)
@@ -14,6 +27,12 @@ def annotate_cells(cairo_surface, cell_xyz, radius, rgb, linewidth=5):
 
 
 def surface_from_array(a):
+    # type: (np.array) -> cairo.ImageSurface
+    """Produces a ImageSurface from a numpy array.
+
+    Stretches array values to an 8-bit image and yields a Cairo ImageSurface
+    for drawing.
+    """
     minval = a[a.nonzero()].min()
     maxval = a.max()
     image_data = a.astype(float) - minval
@@ -30,6 +49,8 @@ def surface_from_array(a):
 
 
 def PIL_from_surface(surface):
+    # type: (cairo.ImageSurface) -> Image.Image
+    """Creates a PIL Image from a Cairo ImageSurface."""
     w = surface.get_width()
     h = surface.get_height()
     img = Image.frombuffer("RGBA", (w, h), surface.get_data(), "raw", "BGRA", 0, 1)
