@@ -32,4 +32,12 @@ setup(
         'shapely',
         'tifffile',
     ],
+    entry_points={
+        'console_scripts': [
+            'elisa_id_singlets = elisa.id_singlets:main',
+            'elisa_normalize_bg = elisa.normalize_bg:main',
+            'elisa_register = elisa.register:main',
+            'elisa_stitch = elisa.stitch:main',
+        ]
+    },
 )
