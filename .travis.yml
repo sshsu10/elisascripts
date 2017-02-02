@@ -26,8 +26,8 @@ matrix:
       env:
         - BASEPYTHON=python2.7
       before_install:
-        - brew update && brew upgrade
-        - brew install py2cairo geos libtiff
+        - brew update
+        - brew reinstall py2cairo geos libtiff python python3
 
 install:
   - pip install --user tox
